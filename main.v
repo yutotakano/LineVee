@@ -55,20 +55,18 @@ pub fn (mut lv LineVee) init() {
 }
 
 // Handle only the index page
-pub fn (mut lv LineVee) index() {
+pub fn (mut lv LineVee) index() vweb.Result {
   if !is_valid_request(mut lv) {
     lv.debug("Invalid request, discarding with empty 200 OK.")
-    lv.vweb.ok("")
-    return
+    return lv.vweb.ok("Invalid Request.")
   }
-  lv.debug("Handling valid request...")
   lv.handle_webhook(lv.vweb.req)
-  lv.vweb.ok("")
+  return lv.vweb.ok("All Good.")
 }
 
-pub fn is_valid_request(mut lv LineVee) bool {
+fn is_valid_request(mut lv LineVee) bool {
   if !("x-line-signature" in lv.vweb.req.headers) {
-    lv.info("x-line-signature Header not found.")
+    lv.debug("x-line-signature Header not found.")
     return false
   }
 
@@ -79,6 +77,7 @@ pub fn is_valid_request(mut lv LineVee) bool {
     lv.warn("x-line-signature Header hash mismatch, is someone attempting to wrongly authenticate?")
     return false
   }
+  lv.debug("Request's signature is valid.")
   return true
 }
 
