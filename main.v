@@ -43,14 +43,15 @@ pub fn (mut lv LineVee) warn(msg string) {
 // Run once upon starting
 pub fn (mut lv LineVee) init_once() {
   lv.cli_log = log.Log{}
-  lv.cli_log.set_level(log.Level.debug)
-  lv.cli_log.set_output_level(log.Level.debug)
+  lv.cli_log.set_level(log.Level.info)
+  lv.cli_log.set_output_level(log.Level.info)
   lv.debug("init_once()")
 }
 
 // Run for each connection
 pub fn (mut lv LineVee) init() {
   lv.info("Request received at ${lv.vweb.req.url}")
+  lv.vweb.set_content_type("text/html; charset=UTF-8")
   return
 }
 
@@ -65,16 +66,28 @@ pub fn (mut lv LineVee) index() vweb.Result {
 }
 
 fn is_valid_request(mut lv LineVee) bool {
-  if !("x-line-signature" in lv.vweb.req.headers) {
-    lv.debug("x-line-signature Header not found.")
+  lv.debug(lv.vweb.req.headers.str())
+
+  mut lowercase_headers := map[string]string
+  for i, v in lv.vweb.req.headers {
+    lowercase_headers[i.to_lower()] = v
+  }
+
+  mut sent_signature := ""
+  if "x-line-signature" in lv.vweb.req.headers {
+    sent_signature = lv.vweb.req.headers["x-line-signature"]
+  } else if "X-Line-Signature" in lv.vweb.req.headers {
+    sent_signature = lv.vweb.req.headers["X-Line-Signature"]
+  } else {
+    lv.debug("X-Line-Signature Header not found.")
     return false
   }
 
   hash := hmac.new(lv.channel_secret.bytes(), lv.vweb.req.data.bytes(), sha256.sum, sha256.block_size)
-  signature := base64.decode(lv.vweb.req.headers["x-line-signature"]).bytes()
+  signature := base64.decode(sent_signature).bytes()
 
   if hash != signature {
-    lv.warn("x-line-signature Header hash mismatch, is someone attempting to wrongly authenticate?")
+    lv.warn("X-Line-Signature Header hash mismatch, is someone attempting to wrongly authenticate?")
     return false
   }
   lv.debug("Request's signature is valid.")
@@ -82,7 +95,8 @@ fn is_valid_request(mut lv LineVee) bool {
 }
 
 fn (mut lv LineVee) handle_webhook(req http.Request) {
+  lv.debug("Webhook Received:" + req.str())
   a := json.decode(api.LineWebhook, lv.vweb.req.data) or {api.LineWebhook{}}
-  println(a)
+  lv.debug("Parsed Webhook:" + a.str())
   return
 }
