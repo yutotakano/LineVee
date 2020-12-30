@@ -51,12 +51,13 @@ pub fn (mut lv LineVee) init() {
 
 pub fn (mut lv LineVee) index() {
   if !is_valid_request(mut lv) {
-    lv.vweb.ok("All Good.")
+    lv.info("Invalid request, discarding.")
+    lv.vweb.ok("")
     return
   }
   lv.info("Handling valid request...")
   lv.handle_webhook(lv.vweb.req)
-  lv.vweb.ok("All Good, valid request.")
+  lv.vweb.ok("All Good.")
 }
 
 pub fn is_valid_request(mut lv LineVee) bool {
@@ -64,13 +65,15 @@ pub fn is_valid_request(mut lv LineVee) bool {
     lv.info("x-line-signature Header not found.")
     return false
   }
+
   hash := hmac.new(lv.channel_secret.bytes(), lv.vweb.req.data.bytes(), sha256.sum, sha256.block_size)
   signature := base64.decode(lv.vweb.req.headers["x-line-signature"]).bytes()
 
   if hash != signature {
-    lv.info("x-line-signature Header hash mismatch.")
+    lv.warn("x-line-signature Header hash mismatch, is someone attempting to wrongly authenticate?")
     return false
   }
+  
   return true
 }
 
