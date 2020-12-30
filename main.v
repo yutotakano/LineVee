@@ -60,7 +60,6 @@ pub fn (mut lv LineVee) index() {
 }
 
 pub fn is_valid_request(mut lv LineVee) bool {
-  println(lv.vweb.req)
   if !("x-line-signature" in lv.vweb.req.headers) {
     lv.info("x-line-signature Header not found.")
     return false
