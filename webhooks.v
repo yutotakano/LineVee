@@ -1,6 +1,13 @@
-module api
+module linevee
 
-pub struct LineWebhook {
+pub struct LineEmoji {
+	index      int
+	length     int
+	product_id string [json: "productId"]
+	emoji_id   string [json: "emojiId"]
+}
+
+struct LineWebhook {
 	destination string
 	events []LineWebhookEvent
 }
@@ -46,13 +53,6 @@ struct LineWebhookMessage {
 	sticker_id            string                     [json: "stickerId"]
 	sticker_resource_type string                     [json: "stickerResourceType"]
 	keywords              []string
-}
-
-struct LineEmoji {
-	index      int
-	length     int
-	product_id string [json: "productId"]
-	emoji_id   string [json: "emojiId"]
 }
 
 struct LineWebhookContentProvider {
