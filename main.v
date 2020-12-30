@@ -24,6 +24,7 @@ pub mut:
 }
 
 pub fn (mut lv LineVee) run() {
+  println("Running LineVee " + version + " by Yuto Takano.")
   vweb.run_app<LineVee>(mut lv, lv.port)
 }
 
@@ -49,9 +50,10 @@ pub fn (mut lv LineVee) init() {
   return
 }
 
+// Handle only the index page
 pub fn (mut lv LineVee) index() {
   if !is_valid_request(mut lv) {
-    lv.info("Invalid request, discarding.")
+    lv.info("Invalid request, discarding with empty 200 OK.")
     lv.vweb.ok("")
     return
   }
@@ -73,7 +75,6 @@ pub fn is_valid_request(mut lv LineVee) bool {
     lv.warn("x-line-signature Header hash mismatch, is someone attempting to wrongly authenticate?")
     return false
   }
-  
   return true
 }
 
