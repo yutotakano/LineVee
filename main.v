@@ -8,8 +8,6 @@ import crypto.hmac
 import crypto.sha256
 import encoding.base64
 
-import linevee.api
-
 pub const (
   version = "0.0.1"
 )
@@ -21,6 +19,13 @@ pub struct LineVee {
 pub mut:
   vweb                 vweb.Context
 	cli_log              log.Log
+  on_text_message      fn (string, string, []LineEmoji)              = fn (a string, b string, c []LineEmoji) {}
+  on_image_message     fn (string, bool, string, string)             = fn (a string, b bool, c string, d string) {}
+  on_video_message     fn (string, int, bool, string, string)        = fn (a string, b int, c bool, d string, e string) {}
+  on_audio_message     fn (string, int, bool, string)                = fn (a string, b int, c bool, d string) {}
+  on_file_message      fn (string, string, int)                      = fn (a string, b string, c int) {}
+  on_location_message  fn (string, string, string, f32, f32)         = fn (a string, b string, c string, d f32, e f32) {}
+  on_sticker_message   fn (string, string, string, string, []string) = fn (a string, b string, c string, d string, e []string) {}
 }
 
 pub fn (mut lv LineVee) run() {
@@ -96,7 +101,81 @@ fn is_valid_request(mut lv LineVee) bool {
 
 fn (mut lv LineVee) handle_webhook(req http.Request) {
   lv.debug("Webhook Received:" + req.str())
-  a := json.decode(api.LineWebhook, lv.vweb.req.data) or {api.LineWebhook{}}
-  lv.debug("Parsed Webhook:" + a.str())
-  return
+  data := json.decode(LineWebhook, lv.vweb.req.data) or {LineWebhook{}}
+  lv.debug("Parsed Webhook:" + data.str())
+  for event in data.events {
+    event_identifier := determine_event(event)
+    lv.debug("Determined event: " + event_identifier)
+    match event_identifier {
+      "message/text" {
+        lv.on_text_message(
+          event.message.id,
+          event.message.text,
+          event.message.emojis
+          )
+      }
+      "message/image" {
+        lv.on_image_message(
+          event.message.id,
+          event.message.content_provider.content_type == "line",
+          event.message.content_provider.original_content_url,
+          event.message.content_provider.preview_image_url
+          )
+      }
+      "message/video" {
+        lv.on_video_message(
+          event.message.id,
+          event.message.duration,
+          event.message.content_provider.content_type == "line",
+          event.message.content_provider.original_content_url,
+          event.message.content_provider.preview_image_url
+        )
+      }
+      "message/audio" {
+        lv.on_audio_message(
+          event.message.id,
+          event.message.duration,
+          event.message.content_provider.content_type == "line",
+          event.message.content_provider.original_content_url
+        )
+      }
+      "message/file" {
+        lv.on_file_message(
+          event.message.id,
+          event.message.file_name,
+          event.message.file_size
+        )
+      }
+      "message/location" {
+        lv.on_location_message(
+          event.message.id,
+          event.message.title,
+          event.message.address,
+          event.message.latitude,
+          event.message.longitude
+        )
+      }
+      "message/sticker" {
+        lv.on_sticker_message(
+          event.message.id,
+          event.message.package_id,
+          event.message.sticker_id,
+          event.message.sticker_resource_type,
+          event.message.keywords
+        )
+      }
+      else {}
+    }
+  }
+}
+
+fn determine_event(e LineWebhookEvent) string {
+
+  return match e.event_type {
+    "message" {    
+      "message/" + e.message.message_type
+    }
+    else {""}
+  }
+
 }
