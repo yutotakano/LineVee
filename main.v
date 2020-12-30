@@ -28,6 +28,10 @@ pub fn (mut lv LineVee) run() {
   vweb.run_app<LineVee>(mut lv, lv.port)
 }
 
+pub fn (mut lv LineVee) debug(msg string) {
+  lv.cli_log.debug(msg)
+}
+
 pub fn (mut lv LineVee) info(msg string) {
   lv.cli_log.info(msg)
 }
@@ -41,7 +45,7 @@ pub fn (mut lv LineVee) init_once() {
   lv.cli_log = log.Log{}
   lv.cli_log.set_level(log.Level.debug)
   lv.cli_log.set_output_level(log.Level.debug)
-  lv.info("init_once()")
+  lv.debug("init_once()")
 }
 
 // Run for each connection
@@ -53,13 +57,13 @@ pub fn (mut lv LineVee) init() {
 // Handle only the index page
 pub fn (mut lv LineVee) index() {
   if !is_valid_request(mut lv) {
-    lv.info("Invalid request, discarding with empty 200 OK.")
+    lv.debug("Invalid request, discarding with empty 200 OK.")
     lv.vweb.ok("")
     return
   }
-  lv.info("Handling valid request...")
+  lv.debug("Handling valid request...")
   lv.handle_webhook(lv.vweb.req)
-  lv.vweb.ok("All Good.")
+  lv.vweb.ok("")
 }
 
 pub fn is_valid_request(mut lv LineVee) bool {
