@@ -13,13 +13,13 @@ pub const (
 )
 
 pub struct LineVee {
+	vweb.Context
   port                 int    = 8080
   channel_secret       string
   channel_access_token string
 pub mut:
-  vweb                 vweb.Context
 	cli_log              log.Log
-  // on_raw_webhook_receive   fn (map[string]json2.Any) = fn (a map[string]json2.Any) {}
+  on_raw_webhook_receive   fn (json2.Any) = fn (a json2.Any) {}
   on_text_message      fn (string, string, []LineEmoji)              = fn (a string, b string, c []LineEmoji) {}
   on_image_message     fn (string, bool, string, string)             = fn (a string, b bool, c string, d string) {}
   on_video_message     fn (string, int, bool, string, string)        = fn (a string, b int, c bool, d string, e string) {}
@@ -56,8 +56,8 @@ pub fn (mut lv LineVee) init_once() {
 
 // Run for each connection
 pub fn (mut lv LineVee) init() {
-  lv.info("Request received at ${lv.vweb.req.url}")
-  lv.vweb.set_content_type("text/html; charset=UTF-8")
+  lv.info("Request received at ${lv.req.url}")
+  lv.set_content_type("text/html; charset=UTF-8")
   return
 }
 
@@ -65,31 +65,31 @@ pub fn (mut lv LineVee) init() {
 pub fn (mut lv LineVee) index() vweb.Result {
   if !is_valid_request(mut lv) {
     lv.debug("Invalid request, discarding with empty 200 OK.")
-    return lv.vweb.ok("Invalid Request.")
+    return lv.ok("Invalid Request.")
   }
-  lv.handle_webhook(lv.vweb.req)
-  return lv.vweb.ok("All Good.")
+  lv.handle_webhook(lv.req)
+  return lv.ok("All Good.")
 }
 
 fn is_valid_request(mut lv LineVee) bool {
-  lv.debug(lv.vweb.req.headers.str())
+  lv.debug(lv.req.headers.str())
 
   mut lowercase_headers := map[string]string
-  for i, v in lv.vweb.req.headers {
+  for i, v in lv.req.headers {
     lowercase_headers[i.to_lower()] = v
   }
 
   mut sent_signature := ""
-  if "x-line-signature" in lv.vweb.req.headers {
-    sent_signature = lv.vweb.req.headers["x-line-signature"]
-  } else if "X-Line-Signature" in lv.vweb.req.headers {
-    sent_signature = lv.vweb.req.headers["X-Line-Signature"]
+  if "x-line-signature" in lv.req.headers {
+    sent_signature = lv.req.headers["x-line-signature"]
+  } else if "X-Line-Signature" in lv.req.headers {
+    sent_signature = lv.req.headers["X-Line-Signature"]
   } else {
     lv.debug("X-Line-Signature Header not found.")
     return false
   }
 
-  hash := hmac.new(lv.channel_secret.bytes(), lv.vweb.req.data.bytes(), sha256.sum, sha256.block_size)
+  hash := hmac.new(lv.channel_secret.bytes(), lv.req.data.bytes(), sha256.sum, sha256.block_size)
   signature := base64.decode(sent_signature).bytes()
 
   if hash != signature {
@@ -102,15 +102,15 @@ fn is_valid_request(mut lv LineVee) bool {
 
 fn (mut lv LineVee) handle_webhook(req http.Request) {
   lv.debug("Webhook Received:" + req.str())
-  raw_data := json2.raw_decode(lv.vweb.req.data) or { 
+  raw_data := json2.raw_decode(lv.req.data) or { 
     panic("Invalid JSON in webhook.")
     return
   }
+  lv.on_raw_webhook_receive(raw_data)
   data := raw_data.as_map()
   
   for raw_event in data["events"].arr() {
     event := raw_event.as_map()
-    // lv.on_raw_webhook_receive(event)
     event_identifier := event["type"].str()
     lv.debug("Determined event: " + event_identifier)
     match event_identifier {
