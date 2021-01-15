@@ -3,7 +3,7 @@ module linevee
 import vweb
 import net.http
 import log
-import json
+import x.json2
 import crypto.hmac
 import crypto.sha256
 import encoding.base64
@@ -19,6 +19,7 @@ pub struct LineVee {
 pub mut:
   vweb                 vweb.Context
 	cli_log              log.Log
+  // on_raw_webhook_receive   fn (map[string]json2.Any) = fn (a map[string]json2.Any) {}
   on_text_message      fn (string, string, []LineEmoji)              = fn (a string, b string, c []LineEmoji) {}
   on_image_message     fn (string, bool, string, string)             = fn (a string, b bool, c string, d string) {}
   on_video_message     fn (string, int, bool, string, string)        = fn (a string, b int, c bool, d string, e string) {}
@@ -48,8 +49,8 @@ pub fn (mut lv LineVee) warn(msg string) {
 // Run once upon starting
 pub fn (mut lv LineVee) init_once() {
   lv.cli_log = log.Log{}
-  lv.cli_log.set_level(log.Level.info)
-  lv.cli_log.set_output_level(log.Level.info)
+  lv.cli_log.set_level(log.Level.debug)
+  lv.cli_log.set_output_level(log.Level.debug)
   lv.debug("init_once()")
 }
 
@@ -101,81 +102,90 @@ fn is_valid_request(mut lv LineVee) bool {
 
 fn (mut lv LineVee) handle_webhook(req http.Request) {
   lv.debug("Webhook Received:" + req.str())
-  data := json.decode(LineWebhook, lv.vweb.req.data) or {LineWebhook{}}
-  lv.debug("Parsed Webhook:" + data.str())
-  for event in data.events {
-    event_identifier := determine_event(event)
+  raw_data := json2.raw_decode(lv.vweb.req.data) or { 
+    panic("Invalid JSON in webhook.")
+    return
+  }
+  data := raw_data.as_map()
+  
+  for raw_event in data["events"].arr() {
+    event := raw_event.as_map()
+    // lv.on_raw_webhook_receive(event)
+    event_identifier := event["type"].str()
     lv.debug("Determined event: " + event_identifier)
     match event_identifier {
-      "message/text" {
+      "message" {
+        raw_message := event["message"]
+        message := raw_message.as_map()
+        mut emojis := []LineEmoji{}
+        for raw_emoji in message["emojis"].arr() {
+          emoji := raw_emoji.as_map()
+          emojis << LineEmoji{
+            index: emoji["index"].int(),
+            length: emoji["length"].int(),            
+            product_id: emoji["productId"].str(),            
+            emoji_id: emoji["emojiId"].str()
+          }
+        }
         lv.on_text_message(
-          event.message.id,
-          event.message.text,
-          event.message.emojis
+          message["id"].str(),
+          message["text"].str(),
+          emojis
           )
-      }
-      "message/image" {
-        lv.on_image_message(
-          event.message.id,
-          event.message.content_provider.content_type == "line",
-          event.message.content_provider.original_content_url,
-          event.message.content_provider.preview_image_url
-          )
-      }
-      "message/video" {
-        lv.on_video_message(
-          event.message.id,
-          event.message.duration,
-          event.message.content_provider.content_type == "line",
-          event.message.content_provider.original_content_url,
-          event.message.content_provider.preview_image_url
-        )
-      }
-      "message/audio" {
-        lv.on_audio_message(
-          event.message.id,
-          event.message.duration,
-          event.message.content_provider.content_type == "line",
-          event.message.content_provider.original_content_url
-        )
-      }
-      "message/file" {
-        lv.on_file_message(
-          event.message.id,
-          event.message.file_name,
-          event.message.file_size
-        )
-      }
-      "message/location" {
-        lv.on_location_message(
-          event.message.id,
-          event.message.title,
-          event.message.address,
-          event.message.latitude,
-          event.message.longitude
-        )
-      }
-      "message/sticker" {
-        lv.on_sticker_message(
-          event.message.id,
-          event.message.package_id,
-          event.message.sticker_id,
-          event.message.sticker_resource_type,
-          event.message.keywords
-        )
       }
       else {}
     }
+    //   "message/image" {
+    //     lv.on_image_message(
+    //       event.message.id,
+    //       event.message.content_provider.content_type == "line",
+    //       event.message.content_provider.original_content_url,
+    //       event.message.content_provider.preview_image_url
+    //       )
+    //   }
+    //   "message/video" {
+    //     lv.on_video_message(
+    //       event.message.id,
+    //       event.message.duration,
+    //       event.message.content_provider.content_type == "line",
+    //       event.message.content_provider.original_content_url,
+    //       event.message.content_provider.preview_image_url
+    //     )
+    //   }
+    //   "message/audio" {
+    //     lv.on_audio_message(
+    //       event.message.id,
+    //       event.message.duration,
+    //       event.message.content_provider.content_type == "line",
+    //       event.message.content_provider.original_content_url
+    //     )
+    //   }
+    //   "message/file" {
+    //     lv.on_file_message(
+    //       event.message.id,
+    //       event.message.file_name,
+    //       event.message.file_size
+    //     )
+    //   }
+    //   "message/location" {
+    //     lv.on_location_message(
+    //       event.message.id,
+    //       event.message.title,
+    //       event.message.address,
+    //       event.message.latitude,
+    //       event.message.longitude
+    //     )
+    //   }
+    //   "message/sticker" {
+    //     lv.on_sticker_message(
+    //       event.message.id,
+    //       event.message.package_id,
+    //       event.message.sticker_id,
+    //       event.message.sticker_resource_type,
+    //       event.message.keywords
+    //     )
+    //   }
+    //   else {}
+    // }
   }
-}
-
-fn determine_event(e LineWebhookEvent) string {
-
-  return match e.event_type {
-    "message" {    
-      "message/" + e.message.message_type
-    }
-    else {""}
-  }
-
 }
