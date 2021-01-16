@@ -126,6 +126,7 @@ fn (mut lv LineVee) handle_webhook_event(raw_event json2.Any) {
       message := event["message"].as_map()
       message_type := message["type"].str()
       lv.debug("Determined message type: " + message_type)
+      lv.debug("Calling appropriate receiver function.")
       
       // Case match message type, pass parsed message map to reduce computation
       match message["type"].str() {
@@ -174,6 +175,7 @@ fn (mut lv LineVee) handle_webhook_message_text(message map[string]json2.Any, ev
     }
   }
   
+  lv.debug("Calling on_text_message()")
   lv.on_text_message(
     message["id"].str(),
     message["text"].str(),
@@ -183,6 +185,7 @@ fn (mut lv LineVee) handle_webhook_message_text(message map[string]json2.Any, ev
 
 fn (mut lv LineVee) handle_webhook_message_image(message map[string]json2.Any, event json2.Any) {
   content_provider := message["content_provider"].as_map()
+  lv.debug("Calling on_image_message()")
   lv.on_image_message(
     message["id"].str(),
     content_provider["content_type"].str() == "line",
@@ -193,6 +196,7 @@ fn (mut lv LineVee) handle_webhook_message_image(message map[string]json2.Any, e
 
 fn (mut lv LineVee) handle_webhook_message_video(message map[string]json2.Any, event json2.Any) {
   content_provider := message["content_provider"].as_map()
+  lv.debug("Calling on_video_message()")
   lv.on_video_message(
     message["id"].str(),
     message["duration"].int(),
@@ -204,6 +208,7 @@ fn (mut lv LineVee) handle_webhook_message_video(message map[string]json2.Any, e
 
 fn (mut lv LineVee) handle_webhook_message_audio(message map[string]json2.Any, event json2.Any) {
   content_provider := message["content_provider"].as_map()
+  lv.debug("Calling on_audio_message()")
   lv.on_audio_message(
     message["id"].str(),
     message["duration"].int(),
@@ -213,6 +218,7 @@ fn (mut lv LineVee) handle_webhook_message_audio(message map[string]json2.Any, e
 }
 
 fn (mut lv LineVee) handle_webhook_message_file(message map[string]json2.Any, event json2.Any) {
+  lv.debug("Calling on_file_message()")
   lv.on_file_message(
     message["id"].str(),
     message["file_name"].str(),
@@ -221,6 +227,7 @@ fn (mut lv LineVee) handle_webhook_message_file(message map[string]json2.Any, ev
 }
 
 fn (mut lv LineVee) handle_webhook_message_location(message map[string]json2.Any, event json2.Any) {
+  lv.debug("Calling on_location_message()")
   lv.on_location_message(
     message["id"].str(),
     message["title"].str(),
@@ -231,6 +238,7 @@ fn (mut lv LineVee) handle_webhook_message_location(message map[string]json2.Any
 }
 
 fn (mut lv LineVee) handle_webhook_message_sticker(message map[string]json2.Any, event json2.Any) {
+  lv.debug("Calling on_sticker_message()")
   keywords := message["keywords"].arr()
   lv.on_sticker_message(
     message["id"].str(),
