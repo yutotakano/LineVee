@@ -109,7 +109,7 @@ fn (mut lv LineVee) handle_webhook(req http.Request) {
   // Call raw receive function
   lv.on_raw_webhook_receive(raw_data)
 
-  data := raw_data.as_map()  
+  data := raw_data.as_map()
   for raw_event in data["events"].arr() {
     lv.handle_webhook_event(raw_event)
   }
