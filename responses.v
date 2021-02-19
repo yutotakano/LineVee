@@ -1,4 +1,4 @@
-module linevee 
+module linevee
 
 struct LineResponse {
 	LineError
@@ -10,6 +10,6 @@ struct LineError {
 }
 
 struct LineSpecificError {
-	message string
+	message  string
 	property string
 }
