@@ -1,5 +1,7 @@
 # <center>LineVee</center>
 
+**This project is abandoned and unmaintained for the forseeable future**.
+
 LINE Messenger Library for V.
 
 ## QuickStart
